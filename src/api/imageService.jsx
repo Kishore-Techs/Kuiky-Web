@@ -8,6 +8,24 @@ import { getImageUrl, MEDIA_BASE_URL, FALLBACK_MEDIA_BASE_URL } from "./config";
 const imageCache = new Map();
 const pendingRequests = new Map();
 
+/**
+ * 🛡️ Smart Contextual Fallback for Missing Media Assets
+ */
+export const getFallbackImage = (url) => {
+    const u = String(url || '').toLowerCase();
+    if (u.includes('auto') || u.includes('vehicle')) return '/vehicle_auto.png';
+    if (u.includes('ambulance')) return '/vehicle_ambulance.png';
+    if (u.includes('puncture')) return '/vehicle_puncture.png';
+    if (u.includes('grocery') || u.includes('supermarket')) return '/images/categories/grocery.png';
+    if (u.includes('fashion') || u.includes('cloth')) return '/images/categories/fashion.png';
+    if (u.includes('electronic') || u.includes('mobile')) return '/images/categories/electronics.png';
+    if (u.includes('beauty')) return '/images/categories/beauty.png';
+    if (u.includes('home') || u.includes('hostel') || u.includes('rental')) return '/images/categories/home.png';
+    if (u.includes('electrical') || u.includes('paint')) return '/images/categories/electrical.png';
+    if (u.includes('food') || u.includes('restaurent') || u.includes('restaurant')) return '/images/categories/grocery.png';
+    return '/images/no-image.png';
+};
+
 export const useSmartImage = (rawPath) => {
     const [src, setSrc] = useState(getImageUrl(null));
     const [loaded, setLoaded] = useState(false);
@@ -105,8 +123,8 @@ export const useSmartImage = (rawPath) => {
                 const finalBlobUrl = await fetchPromise;
                 setSrc(finalBlobUrl);
             } catch (err) {
-                // If fetch fails (404 / missing media), fallback to clean local placeholder
-                const fallbackImg = "/images/no-image.png";
+                // If fetch fails (404 / missing media), fallback to clean contextual placeholder
+                const fallbackImg = getFallbackImage(fullUrl);
                 imageCache.set(fullUrl, fallbackImg);
                 setSrc(fallbackImg);
                 setError(true);
@@ -121,4 +139,3 @@ export const useSmartImage = (rawPath) => {
 
     return { src, loaded, error };
 };
-

@@ -293,7 +293,11 @@ api.interceptors.response.use(
     const isNgrokOffline =
       (!error.response && error.code !== "ECONNABORTED") ||
       error.response?.headers?.["ngrok-error-code"] === "ERR_NGROK_3200" ||
-      (error.response?.status === 404 && typeof error.response?.data === "string" && error.response.data.includes("ERR_NGROK")) ||
+      (error.response?.status === 404 && (
+        (typeof error.response?.data === "string" && (error.response.data.includes("ERR_NGROK") || error.response.data.includes("ngrok"))) ||
+        originalRequest.baseURL?.includes("ngrok") ||
+        originalRequest.url?.includes("ngrok")
+      )) ||
       [502, 503, 504].includes(error.response?.status);
 
     if (isNgrokOffline && !originalRequest._isFallbackRetry && FALLBACK_API_BASE_URL) {
@@ -386,10 +390,25 @@ export const getCachedProductsSync = () => {
 // Background refresh without blocking UI
 const refreshProductsInBackground = async () => {
   try {
-    const res = await axios.get(`${API_BASE_URL}${ECOM_API_PATH}${API_ENDPOINTS.PRODUCTS}`, {
-      headers: { ...COMMON_HEADERS }
-    });
-    const results = Array.isArray(res.data) ? res.data : res.data.results || [];
+    let results = [];
+    try {
+      const res = await api.get(API_ENDPOINTS.PRODUCTS, {
+        headers: { Authorization: undefined },
+        timeout: 10000
+      });
+      results = Array.isArray(res.data) ? res.data : res.data.results || [];
+    } catch (primaryErr) {
+      if (FALLBACK_API_BASE_URL && FALLBACK_API_BASE_URL !== API_BASE_URL) {
+        try {
+          const fbRes = await axios.get(`${FALLBACK_API_BASE_URL}${ECOM_API_PATH}${API_ENDPOINTS.PRODUCTS}`, {
+            headers: { ...COMMON_HEADERS },
+            timeout: 10000
+          });
+          results = Array.isArray(fbRes.data) ? fbRes.data : fbRes.data.results || [];
+        } catch (fallbackErr) {}
+      }
+    }
+
     if (results.length > 0) {
       memoryProductsCache = results;
       memoryProductsTimestamp = Date.now();
@@ -457,30 +476,22 @@ export const fetchProducts = async (filters = {}) => {
     }
     return results;
   } catch (error) {
-    console.warn("fetchProducts network error, checking fallback:", error.message);
+    console.warn("fetchProducts primary request failed, checking fallback:", error.message);
     if (memoryProductsCache && memoryProductsCache.length > 0) {
       return memoryProductsCache;
     }
-    try {
-      const res = await axios.get(`${API_BASE_URL}${ECOM_API_PATH}${API_ENDPOINTS.PRODUCTS}`, {
-        params,
-        headers: { ...COMMON_HEADERS },
-        timeout: 15000
-      });
-      return Array.isArray(res.data) ? res.data : res.data.results || [];
-    } catch (fallbackErr) {
-      if (FALLBACK_API_BASE_URL && FALLBACK_API_BASE_URL !== API_BASE_URL) {
-        try {
-          const fbRes = await axios.get(`${FALLBACK_API_BASE_URL}${ECOM_API_PATH}${API_ENDPOINTS.PRODUCTS}`, {
-            params,
-            headers: { ...COMMON_HEADERS },
-            timeout: 15000
-          });
-          return Array.isArray(fbRes.data) ? fbRes.data : fbRes.data.results || [];
-        } catch (e2) {}
-      }
-      return memoryProductsCache || [];
+    if (FALLBACK_API_BASE_URL && FALLBACK_API_BASE_URL !== API_BASE_URL) {
+      try {
+        const fbRes = await axios.get(`${FALLBACK_API_BASE_URL}${ECOM_API_PATH}${API_ENDPOINTS.PRODUCTS}`, {
+          params,
+          headers: { ...COMMON_HEADERS },
+          timeout: 15000
+        });
+        const fbResults = Array.isArray(fbRes.data) ? fbRes.data : fbRes.data.results || [];
+        if (fbResults.length > 0) return fbResults;
+      } catch (e2) {}
     }
+    return memoryProductsCache || [];
   }
 };
 

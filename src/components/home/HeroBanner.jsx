@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { fetchBanners } from '../../api/api';
 import { getImageUrl } from '../../api/config';
+import LocationSearchInput from './LocationSearchInput';
 import './HeroBanner.css';
 
 // Kuiky High-Fidelity Service Banners (New)
@@ -26,7 +27,9 @@ const LOCAL_FALLBACK_IMAGES = {
     'banner': imgBanner,
     'ambulance_banner.jpg': imgAmbulance,
     'auto_banner.jpg': imgAuto,
-    'puncture_banner.jpg': imgPuncture
+    'puncture_banner.jpg': imgPuncture,
+    'Auto_1cLWSkY.jpeg': imgAuto,
+    'Auto.jpeg': imgAuto
 };
 
 const ALL_DEFAULT_BANNERS = [
@@ -42,8 +45,7 @@ const ALL_DEFAULT_BANNERS = [
         theme_color: "#ef4444",
         gradient_bg: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
         accent_glow: "rgba(239, 68, 68, 0.4)",
-        cta_text: "Emergency SOS",
-        cta_secondary: "Call SOS",
+        cta_text: "Call SOS",
         cta_tel: "tel:108",
         checklist: [
             "24/7 Availability",
@@ -232,9 +234,12 @@ const HeroBanner = () => {
             return;
         }
 
-        // Secondary SOS phone call
-        if (isSecondary && slide.cta_tel) {
-            window.location.href = slide.cta_tel;
+        // Direct phone call for ambulance / emergency or any slide with cta_tel
+        if (slide.service_type === 'ambulance' || slide.cta_tel || isSecondary) {
+            const telNumber = slide.cta_tel
+                ? (slide.cta_tel.startsWith('tel:') ? slide.cta_tel : `tel:${slide.cta_tel}`)
+                : 'tel:108';
+            window.location.href = telNumber;
             return;
         }
 
@@ -344,8 +349,11 @@ const HeroBanner = () => {
                                             onClick={() => handleActionClick(currentSlide, false)}
                                         >
                                             {currentSlide.service_type === 'retail' && <ShoppingCart size={18} />}
+                                            {(currentSlide.service_type === 'ambulance' || currentSlide.cta_tel) && <PhoneCall size={18} />}
                                             <span>{currentSlide.cta_text}</span>
-                                            <ArrowRight size={18} className="hb-arrow-discovery" />
+                                            {currentSlide.service_type !== 'ambulance' && !currentSlide.cta_tel && (
+                                                <ArrowRight size={18} className="hb-arrow-discovery" />
+                                            )}
                                         </button>
 
                                         {currentSlide.cta_secondary && (
@@ -465,13 +473,21 @@ const HeroBanner = () => {
                                     </div>
 
                                     <div className="hb-form-group">
-                                        <label>Pickup / Service Location</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="Enter your current address or landmark..."
+                                        <label>
+                                            {bookingModal.service_type === 'auto' || bookingModal.title?.toLowerCase().includes('auto')
+                                                ? 'Pickup Location'
+                                                : 'Service Location'}
+                                        </label>
+                                        <LocationSearchInput
                                             value={pickupLocation}
-                                            onChange={(e) => setPickupLocation(e.target.value)}
+                                            onChange={setPickupLocation}
+                                            placeholder={
+                                                bookingModal.service_type === 'auto' || bookingModal.title?.toLowerCase().includes('auto')
+                                                    ? 'Search pickup location on map...'
+                                                    : 'Enter service address or landmark...'
+                                            }
+                                            themeColor={bookingModal.theme_color}
+                                            required
                                         />
                                     </div>
 

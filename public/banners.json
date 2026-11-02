@@ -7,8 +7,7 @@
     "prize_offer": "🚨 24/7 EMERGENCY RESPONSE • INSTANT DISPATCH",
     "service_type": "ambulance",
     "theme_color": "#ef4444",
-    "cta_text": "Emergency SOS",
-    "cta_secondary": "Call SOS",
+    "cta_text": "Call SOS",
     "cta_tel": "108",
     "checklist": [
       "24/7 Availability",

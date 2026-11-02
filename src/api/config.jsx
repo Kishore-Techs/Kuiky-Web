@@ -9,6 +9,10 @@ export const API_BASE_URL = "https://affecting-tingling-duke.ngrok-free.dev";
 // ✅ Production Fallback API Base (When local ngrok backend is offline/unreachable)
 export const FALLBACK_API_BASE_URL = "https://api.codingboss.in";
 
+// ✅ Vandanmart API Base & Gateways
+export const VANDANMART_API_BASE_URL = "https://api.codingboss.in/vandanmart";
+export const HERBAL_API_BASE_URL = "https://api.codingboss.in/herbal";
+
 // ✅ Primary Media Base: Active backend (local Django uploads via Ngrok)
 export const MEDIA_BASE_URL = API_BASE_URL;
 
@@ -34,8 +38,60 @@ export const getImageUrl = (path) => {
     }
 
     let finalPath = String(path).trim();
+    const lowerPath = finalPath.toLowerCase();
 
-    // 2️⃣ Handle Absolute URLs from Backend
+    // 2️⃣ Override known local seed images or missing/broken backend files (applies to both relative & absolute URLs)
+    if (
+        lowerPath.includes("auto_1clwsky") ||
+        lowerPath.includes("category_images/auto") ||
+        lowerPath.includes("vehicle_auto") ||
+        (lowerPath.includes("auto") && (lowerPath.includes("category") || lowerPath.includes("vehicle") || lowerPath.includes(".jp")))
+    ) {
+        return "/vehicle_auto.png";
+    }
+    if (lowerPath.includes("ambulance") && (lowerPath.includes("category") || lowerPath.includes("vehicle") || lowerPath.includes("service"))) {
+        return "/vehicle_ambulance.png";
+    }
+    if (lowerPath.includes("puncture") && (lowerPath.includes("category") || lowerPath.includes("vehicle") || lowerPath.includes("service"))) {
+        return "/vehicle_puncture.png";
+    }
+    if (lowerPath.includes("car_wash")) {
+        return "/vehicle_auto.png";
+    }
+    if (lowerPath.includes("pvr.jpg")) {
+        return "/images/categories/grocery.png";
+    }
+    if (lowerPath.includes("coffee.jpg") || lowerPath.includes("tea.jpg") || lowerPath.includes("snacks.jpg")) {
+        return "/images/subcategories/snacks-beverages.png";
+    }
+    if (lowerPath.includes("oil.jpg")) {
+        return "/images/subcategories/edible-oils.png";
+    }
+    if (lowerPath.includes("rice.jpg")) {
+        return "/images/subcategories/grains-pulses.png";
+    }
+    if (lowerPath.includes("cooking_essential.jpg")) {
+        return "/images/subcategories/organic-staples.png";
+    }
+
+    // 3️⃣ Local Static / Public Assets (Frontend Vite assets in public/)
+    const cleanPath = finalPath.startsWith("/") ? finalPath.substring(1) : finalPath;
+    if (
+        cleanPath.startsWith("images/") ||
+        cleanPath.startsWith("categories/") ||
+        cleanPath.startsWith("banners/") ||
+        cleanPath.startsWith("enthiran_") ||
+        cleanPath.startsWith("card_") ||
+        cleanPath.startsWith("vehicle_") ||
+        cleanPath.startsWith("kuiky-") ||
+        cleanPath.startsWith("vite.") ||
+        cleanPath.startsWith("media/subcategory_images/") ||
+        cleanPath.startsWith("media/category_images/")
+    ) {
+        return `/${cleanPath}`;
+    }
+
+    // 4️⃣ Handle Absolute URLs from Backend
     if (finalPath.startsWith("http://") || finalPath.startsWith("https://")) {
         // Force HTTPS to avoid Mixed Content blocker in modern browsers
         if (finalPath.startsWith("http://")) {
@@ -66,43 +122,8 @@ export const getImageUrl = (path) => {
         return finalPath; // Already valid absolute URL (e.g. ngrok, Cloudinary, S3, or codingboss)
     }
 
-    // Check for known local seed images or missing subcategory files
-    const lowerPath = finalPath.toLowerCase();
-    if (lowerPath.includes("pvr.jpg")) {
-        return "/images/categories/grocery.png";
-    }
-    if (lowerPath.includes("coffee.jpg") || lowerPath.includes("tea.jpg") || lowerPath.includes("snacks.jpg")) {
-        return "/images/subcategories/snacks-beverages.png";
-    }
-    if (lowerPath.includes("oil.jpg")) {
-        return "/images/subcategories/edible-oils.png";
-    }
-    if (lowerPath.includes("rice.jpg")) {
-        return "/images/subcategories/grains-pulses.png";
-    }
-    if (lowerPath.includes("cooking_essential.jpg")) {
-        return "/images/subcategories/organic-staples.png";
-    }
-
-    // 3️⃣ Local Static / Public Assets (Frontend Vite assets in public/)
-    const cleanPath = finalPath.startsWith("/") ? finalPath.substring(1) : finalPath;
-    if (
-        cleanPath.startsWith("images/") ||
-        cleanPath.startsWith("categories/") ||
-        cleanPath.startsWith("banners/") ||
-        cleanPath.startsWith("enthiran_") ||
-        cleanPath.startsWith("card_") ||
-        cleanPath.startsWith("vehicle_") ||
-        cleanPath.startsWith("kuiky-") ||
-        cleanPath.startsWith("vite.") ||
-        cleanPath.startsWith("media/subcategory_images/Pvr.jpg")
-    ) {
-        return `/${cleanPath}`;
-    }
-
-    // 4️⃣ Construct Media CDN URL from relative path for Django uploaded media (e.g. /media/product_images/NAAN.jpg)
+    // 5️⃣ Construct Media CDN URL from relative path for Django uploaded media (e.g. /media/product_images/NAAN.jpg)
     const baseMedia = MEDIA_BASE_URL.endsWith("/") ? MEDIA_BASE_URL.slice(0, -1) : MEDIA_BASE_URL;
 
     return `${baseMedia}/${cleanPath}`;
 };
-

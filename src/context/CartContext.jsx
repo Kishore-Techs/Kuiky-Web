@@ -172,7 +172,7 @@ export const CartProvider = ({ children }) => {
     };
 
     /** Submits an order from the current cart. */
-    const placeOrderFromCart = async (orderData) => {
+    const placeOrderFromCart = async (orderData, paymentInfo = {}) => {
         if (!isAuthenticated) throw { message: "Authentication Required", status: 401 };
         
         const userIdString = localStorage.getItem("user_id");
@@ -236,6 +236,8 @@ export const CartProvider = ({ children }) => {
             date: new Date().toISOString(),
             status: "Processing",
             payment_status: "Paid",
+            payment_method: paymentInfo?.payment_method || "Paytm Gateway",
+            transaction_id: paymentInfo?.transaction_id || `TXN_${Date.now()}`,
             delivery_address: fullOrderPayload.address_line_1,
             address: fullOrderPayload.address_line_1,
             city: fullOrderPayload.city,
